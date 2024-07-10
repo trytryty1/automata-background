@@ -26,6 +26,42 @@ impl World {
         }
     }
 
+    pub fn seed_preditor_prey(&mut self, ticks: u32) {
+        // add 100 random placed preditors
+        for _ in 0..100 {
+            let mut random_idx;
+            loop {
+                random_idx = rand::thread_rng().gen_range(0..self.cells.len());
+                match self.cells[random_idx].cell_type {
+                    CellType::Preditor | CellType::Prey => continue, // Skip and retry
+                    _ => break,                                      // Found a valid spot
+                }
+            }
+
+            self.cells[random_idx] = Cell {
+                cell_type: CellType::Preditor,
+                created_at: ticks,
+            };
+        }
+
+        // add 300 random placed prey
+        for _ in 0..300 {
+            let mut random_idx;
+            loop {
+                random_idx = rand::thread_rng().gen_range(0..self.cells.len());
+                match self.cells[random_idx].cell_type {
+                    CellType::Preditor | CellType::Prey => continue, // Skip and retry
+                    _ => break,                                      // Found a valid spot
+                }
+            }
+
+            self.cells[random_idx] = Cell {
+                cell_type: CellType::Prey,
+                created_at: ticks,
+            };
+        }
+    }
+
     pub fn clear_cell_types(&mut self) {
         for cell in &mut self.cells {
             cell.cell_type = CellType::Empty;
@@ -74,6 +110,12 @@ impl Simulation {
         }
     }
 
+    pub fn reset_simulation(&mut self) {
+        // reseed the worlds
+        self.worlds[0].seed_preditor_prey(self.ticks);
+        self.worlds[1].seed_preditor_prey(self.ticks);
+    }
+
     pub fn update(&mut self) {
         let active_idx = self.active_world;
         let inactive_idx = if active_idx == 0 { 1 } else { 0 };
@@ -85,39 +127,8 @@ impl Simulation {
         // Clear inactive world
         inactive.clear_cell_types();
 
-        if ticks == 0 || active.prey_count == 0 || active.preditor_count == 0 {
-            // add 100 random placed preditors
-            for _ in 0..100 {
-                inactive.cells[rand::thread_rng().gen_range(0..active.size.0)] = Cell {
-                    cell_type: CellType::Preditor,
-                    created_at: ticks,
-                };
-
-                inactive.preditor_count += 1;
-            }
-
-            // add 300 random placed prey
-            for _ in 0..300 {
-                let mut random_idx = rand::thread_rng().gen_range(0..active.size.0);
-
-                // make sure we don't place prey on top of preditors
-                while match active.get_cell(random_idx, 0).cell_type {
-                    CellType::Preditor | CellType::Prey => {
-                        random_idx = rand::thread_rng().gen_range(0..active.size.0);
-                        true
-                    }
-                    _ => false,
-                } {
-                    random_idx = rand::thread_rng().gen_range(0..active.size.0);
-                }
-
-                inactive.cells[rand::thread_rng().gen_range(0..active.size.0)] = Cell {
-                    cell_type: CellType::Prey,
-                    created_at: ticks,
-                };
-
-                inactive.prey_count += 1;
-            }
+        if ticks == 0 {
+            inactive.seed_preditor_prey(ticks);
         }
 
         for row in 0..active.size.0 {
@@ -171,7 +182,8 @@ impl Simulation {
                             inactive
                                 .get_mut_cell(neighbor_row as usize, neighbor_col as usize)
                                 .cell_type = CellType::Prey;
-                            inactive.get_mut_cell(neighbor_row as usize, neighbor_col as usize)
+                            inactive
+                                .get_mut_cell(neighbor_row as usize, neighbor_col as usize)
                                 .created_at = ticks;
                             inactive.prey_count += 1;
 
@@ -192,7 +204,7 @@ impl Simulation {
                     CellType::Preditor => {
                         // If the preditor has been alive for 55 ticks it will die
                         if (ticks - cell.created_at) > 55 {
-                            inactive.preditor_count -= 1;
+                            // inactive.preditor_count -= 1;
                             continue;
                         }
 
@@ -236,7 +248,7 @@ impl Simulation {
 
                         if !found {
                             // If it can't find an empty neighbor it will die
-                            // inactive.prey_count -= 1;
+                            // inactive.preditor_count -= 1;
                             continue;
                         }
 
@@ -245,7 +257,7 @@ impl Simulation {
                             .cell_type
                         {
                             CellType::Prey => {
-                                inactive.preditor_count += 1;
+                                // inactive.preditor_count += 1;
                                 // inactive.prey_count -= 1;
                                 inactive
                                     .get_mut_cell(neighbor_row as usize, neighbor_col as usize)
@@ -254,12 +266,8 @@ impl Simulation {
                                     .get_mut_cell(neighbor_row as usize, neighbor_col as usize)
                                     .created_at = ticks;
 
-                                inactive
-                                    .get_mut_cell(row, col)
-                                    .cell_type = CellType::Preditor;
-                                inactive
-                                    .get_mut_cell(row, col)
-                                    .created_at = cell.created_at;
+                                inactive.get_mut_cell(row, col).cell_type = CellType::Preditor;
+                                inactive.get_mut_cell(row, col).created_at = cell.created_at;
 
                                 continue;
                             }
@@ -267,10 +275,12 @@ impl Simulation {
                                 // inactive.preditor_count -= 1;
                             }
                             CellType::Empty => {
-                                inactive.get_mut_cell(neighbor_row as usize, neighbor_col as usize).cell_type =
-                                    CellType::Preditor;
-                                inactive.get_mut_cell(neighbor_row as usize, neighbor_col as usize).created_at =
-                                    cell.created_at;
+                                inactive
+                                    .get_mut_cell(neighbor_row as usize, neighbor_col as usize)
+                                    .cell_type = CellType::Preditor;
+                                inactive
+                                    .get_mut_cell(neighbor_row as usize, neighbor_col as usize)
+                                    .created_at = cell.created_at;
                             }
                         }
                     }

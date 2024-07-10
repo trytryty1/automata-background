@@ -44,11 +44,9 @@ unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: isize) -> i32 {
     let p = FindWindowExW(hwnd, ptr::null_mut(), class_name_def_view.as_ptr(), ptr::null());
 
     if !p.is_null() {
-        println!("Found DefView: {:?}", p);
         // Find next sibling WorkerW window
         let class_name_workerw = to_wstring("WorkerW");
         workerw = FindWindowExW(ptr::null_mut(), hwnd, class_name_workerw.as_ptr(), ptr::null());
-        println!("Found WorkerW: {:?}", workerw);
         *(lparam as *mut HWND) = workerw;
     }
 
@@ -65,7 +63,6 @@ fn create_new_workerW_window() {
         let progman = find_window("Progman");
 
         if progman.is_null() {
-            println!("Failed to find Progman window.");
             return;
         }
 
@@ -83,9 +80,7 @@ fn create_new_workerW_window() {
         );
 
         if res == 0 {
-            println!("SendMessageTimeout failed.");
         } else {
-            println!("SendMessageTimeout succeeded. Result: {:?}", result);
         }
     }
 }

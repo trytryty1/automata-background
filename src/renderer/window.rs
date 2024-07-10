@@ -209,7 +209,6 @@ impl<'a> State<'a> {
         let sim_scale = 1.0 / PIXELS_PER_CELL as f32;
 
         // Calculate aspect ratio
-        println!("{}x{}", size.width, size.height);
 
         let simulation_parameters_uniform = SimulationParametersUniform {
             width: (size.width as f32 * sim_scale) as u32,
@@ -389,12 +388,15 @@ impl<'a> State<'a> {
     fn update(&mut self) {
         self.simulation.update();
 
+        let mut preditor_count = 0;
+        let mut prey_count = 0;
         // create simulation instances
         let mut instances = Vec::new();
         for (cell_idx, cell) in self.simulation.worlds[0].cells.iter().enumerate() {
             match cell.cell_type {
                 CellType::Empty => {}
                 CellType::Prey => {
+                    prey_count += 1;
                     let (x, y) = self.simulation.worlds[0].get_cell_x_y(cell_idx);
                     instances.push(Instance {
                         position: [x as u32, y as u32],
@@ -402,6 +404,7 @@ impl<'a> State<'a> {
                     });
                 }
                 CellType::Preditor => {
+                    preditor_count += 1;
                     let (x, y) = self.simulation.worlds[0].get_cell_x_y(cell_idx);
                     instances.push(Instance {
                         position: [x as u32, y as u32],
@@ -411,6 +414,10 @@ impl<'a> State<'a> {
             }
         }
         self.instances = instances;
+
+        if preditor_count == 0 || prey_count == 0 {
+            self.simulation.reset_simulation();
+        }
 
         // upload simulation instances
         self.queue.write_buffer(
@@ -524,11 +531,6 @@ pub async fn run() {
         }
     }
 
-    println!(
-        "Monitor width: {}, height: {}",
-        monitor_width, monitor_height
-    );
-
     // set the size of the window
     let _ = window.request_inner_size(PhysicalSize::new(monitor_width, monitor_height));
 
@@ -564,12 +566,10 @@ pub async fn run() {
                         match layeredwindow::get_worker_window_handle() {
                             Ok(layered_window_handle) => {
                                 let layered_hwnd = layered_window_handle as HWND;
-                                println!("Layered window handle: {:?}", layered_window_handle);
                                 // Set the winit window's parent to the layered window
                                 SetParent(winit_hwnd, layered_hwnd);
                             }
                             Err(_) => {
-                                println!("Failed to get worker window handle.");
                             }
                         }
                     }
@@ -596,14 +596,12 @@ pub async fn run() {
                 Event::UserEvent(event) => {
                     match event {
                         UserEvents::LeftClickTrayIcon => {
-                            println!("Left click tray icon");
                         }
                         UserEvents::RightClickTrayIcon => {
                             // Exit the application
                             control_flow.exit();
                         }
                         UserEvents::DoubleClickTrayIcon => {
-                            println!("Double click tray icon");
                         }
                         UserEvents::Exit => {
                             control_flow.exit();
