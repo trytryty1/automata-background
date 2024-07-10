@@ -2,21 +2,20 @@ use std::iter;
 
 use crate::game::world::*;
 use crate::renderer::layeredwindow;
+use trayicon::{Icon, MenuBuilder, MenuItem, TrayIcon, TrayIconBuilder};
 use wgpu::{
     rwh::{HasWindowHandle, RawWindowHandle},
     util::DeviceExt,
 };
 use winapi::um::winuser::SetParent;
-use winit::dpi::LogicalPosition;
 use winit::dpi::PhysicalSize;
+use winit::{dpi::LogicalPosition, event_loop::EventLoopBuilder};
 use winit::{
     event::*,
     event_loop::EventLoop,
     keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowBuilder},
 };
-use trayicon::{Icon, MenuBuilder, MenuItem, TrayIcon, TrayIconBuilder};
-
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 enum UserEvents {
@@ -130,6 +129,8 @@ struct State<'a> {
     num_indices: u32,
     window: &'a Window,
 
+    trayicon: &'a TrayIcon<UserEvents>,
+
     simulation: Simulation,
 
     simulation_parameters_uniform: SimulationParametersUniform,
@@ -138,7 +139,7 @@ struct State<'a> {
 }
 
 impl<'a> State<'a> {
-    async fn new(window: &'a Window) -> State<'a> {
+    async fn new(window: &'a Window, trayicon: &'a TrayIcon<UserEvents>) -> State<'a> {
         let size = window.inner_size();
 
         // The instance is a handle to our GPU
@@ -357,6 +358,8 @@ impl<'a> State<'a> {
             num_indices,
             window,
 
+            trayicon,
+
             simulation_parameters_buffer,
             simulation_parameters_uniform_bind_group: simulation_parameters_bind_group,
             simulation_parameters_uniform,
@@ -476,20 +479,25 @@ pub async fn run() {
         }
     }
 
-    let event_loop = EventLoop::new().unwrap();
-    // let proxy = event_loop.create_proxy();
+    let event_loop = EventLoopBuilder::<UserEvents>::with_user_event()
+        .build()
+        .unwrap();
+    let proxy = event_loop.create_proxy();
 
-    // let trayicon = TrayIconBuilder::new()
-    //     .sender(move |e: &UserEvents| {
-    //         let _ = proxy.send_event(e.clone());
-    //     })
-    //     .icon_from_buffer(buffer(include_bytes!("../../assets/icon.ico")))
-    //     .tooltip("Automata")
-    //     .on_click(UserEvents::LeftClickTrayIcon)
-    //     .on_right_click(UserEvents::RightClickTrayIcon)
-    //     .on_double_click(UserEvents::DoubleClickTrayIcon)
-    //     .build()
-    //     .unwrap();
+    let icon = include_bytes!("../../desktop_automata_icon.ico");
+    // let icon1 = Icon::from_buffer(icon, None, None).unwrap(); // (width, height)
+
+    let trayicon = TrayIconBuilder::new()
+        .sender(move |e: &UserEvents| {
+            let _ = proxy.send_event(e.clone());
+        })
+        .icon_from_buffer(icon)
+        .tooltip("Automata")
+        .on_click(UserEvents::LeftClickTrayIcon)
+        .on_right_click(UserEvents::RightClickTrayIcon)
+        .on_double_click(UserEvents::DoubleClickTrayIcon)
+        .build()
+        .unwrap();
 
     let window = WindowBuilder::new()
         .with_title("Transparent Overlay Window")
@@ -543,10 +551,6 @@ pub async fn run() {
             .expect("Couldn't append canvas to document body.");
     }
 
-    // State::new uses async code, so we're going to wait for it to finish
-    let mut state = State::new(&window).await;
-    let mut surface_configured = false;
-
     #[cfg(target_os = "windows")]
     {
         use winit::platform::windows::WindowExtWindows;
@@ -582,9 +586,34 @@ pub async fn run() {
         window.set_visible(true);
     }
 
+    // State::new uses async code, so we're going to wait for it to finish
+    let mut state = State::new(&window, &trayicon).await;
+    let mut surface_configured = false;
+
     event_loop
         .run(move |event, control_flow| {
             match event {
+                Event::UserEvent(event) => {
+                    match event {
+                        UserEvents::LeftClickTrayIcon => {
+                            println!("Left click tray icon");
+                        }
+                        UserEvents::RightClickTrayIcon => {
+                            // Exit the application
+                            control_flow.exit();
+                        }
+                        UserEvents::DoubleClickTrayIcon => {
+                            println!("Double click tray icon");
+                        }
+                        UserEvents::Exit => {
+                            control_flow.exit();
+                        }
+                        _ => {}
+                    }
+                }
+                Event::LoopExiting { .. } => {
+                    layeredwindow::send_cleanup_message();
+                }
                 Event::WindowEvent {
                     ref event,
                     window_id,

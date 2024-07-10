@@ -1,6 +1,7 @@
 extern crate winapi;
 
 use std::ptr;
+use winapi::shared::minwindef::LPARAM;
 use winapi::shared::windef::HWND;
 use winapi::um::winuser::{EnumWindows, FindWindowW, FindWindowExW, SendMessageTimeoutA};
 
@@ -18,6 +19,23 @@ pub fn get_worker_window_handle() -> Result<HWND, ()> {
         } else {
             Ok(workerw)
         }
+    }
+}
+
+pub fn send_cleanup_message() {
+    unsafe {
+        let lparam_value: LPARAM = 0xCCE268 as LPARAM;
+
+
+        SendMessageTimeoutA(
+            get_worker_window_handle().unwrap(),
+            0xC107,
+            0,
+            0,
+            0,
+            1000,
+            ptr::null_mut(),
+        );
     }
 }
 
