@@ -1,0 +1,38 @@
+[package]
+name = "automata-background"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+
+[dependencies]
+cfg-if = "1"
+winit = { version = "0.29", features = ["rwh_05"] }
+wgpu = "0.19"
+env_logger = "0.10"
+rand = "*"
+log = "0.4"
+pollster = "0.3"
+# NEW!
+bytemuck = { version = "1.12", features = [ "derive" ] }
+trayicon = "*"
+
+raw-window-handle = "0.4.3"
+winapi = { version = "0.3", features = ["winuser"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+console_log = "1.0"
+wgpu = { version = "0.19", features = ["webgl"]}
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+    "Document",
+    "Window",
+    "Element",
+]}
+
+[build-dependencies]
+anyhow = "1.0"
+fs_extra = "1.2"
+glob = "0.3"
