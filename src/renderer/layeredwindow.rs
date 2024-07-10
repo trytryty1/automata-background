@@ -1,7 +1,6 @@
 extern crate winapi;
 
 use std::ptr;
-use winapi::shared::minwindef::LPARAM;
 use winapi::shared::windef::HWND;
 use winapi::um::winuser::{EnumWindows, FindWindowW, FindWindowExW, SendMessageTimeoutA};
 
