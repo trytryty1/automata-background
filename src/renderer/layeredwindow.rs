@@ -24,9 +24,6 @@ pub fn get_worker_window_handle() -> Result<HWND, ()> {
 
 pub fn send_cleanup_message() {
     unsafe {
-        let lparam_value: LPARAM = 0xCCE268 as LPARAM;
-
-
         SendMessageTimeoutA(
             get_worker_window_handle().unwrap(),
             0xC107,
