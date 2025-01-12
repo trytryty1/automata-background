@@ -12,7 +12,6 @@ use winit::dpi::PhysicalSize;
 use winit::{dpi::LogicalPosition, event_loop::EventLoopBuilder};
 use winit::{
     event::*,
-    event_loop::EventLoop,
     keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowBuilder},
 };
